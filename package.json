@@ -1,0 +1,22 @@
+{
+  "name": "kafka-client",
+  "version": "0.1.0",
+  "description": "A simple kafka client to produce and consume messages to/from kafka cluster.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kunkhatri/kafka-wrapper.git"
+  },
+  "keywords": [
+    "kafka",
+    "kafka-client",
+    "nodejs"
+  ],
+  "author": "kkhatri",
+  "dependencies": {
+    "node-rdkafka": "^2.12.0"
+  }
+}
