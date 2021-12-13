@@ -4,7 +4,7 @@ class KafkaProducer {
 
     /**
      * Initializes a KafkaProducer.
-     * @param {String} clientId: id to identify a client producing the message. 
+     * @param {String} clientId: id to identify a client producing the message.
      * @param {Object} config: configs for producer.
      * @param {Object} topicConfig: topic configs.
      */
@@ -42,13 +42,6 @@ class KafkaProducer {
                 console.log('Producer connected to kafka cluster...');
                 resolve(this.producer);
             })
-            .on('delivery-report', (err, report) => {
-                if (err) {
-                    console.warn('Error producing message: ', err);
-                } else {
-                    console.log('Produced event: ', JSON.stringify(report));
-                }
-            })
             .on('event.error', (err) => {
                 console.warn('event.error: ', err);
                 reject(err);
@@ -56,9 +49,17 @@ class KafkaProducer {
             .on('event.log',  (log) => console.log(log))
             .on('disconnected', (msg) => {
                 console.log('Producer disconnected. ' + JSON.stringify(msg));
-                console.log('Trying to connect it back.....');
-                this.producer.connect();
             })
+
+            if (typeof this.topicConfig.acks === 'number' && this.topicConfig.acks > 0 && this.config['dr_cb']) {
+                this.producer.on('delivery-report', (err, report) => {
+                    if (err) {
+                        console.warn('Error producing message: ', err);
+                    } else {
+                        console.log('Produced event: ', JSON.stringify(report));
+                    }
+                })
+            }
         });
     }
 
@@ -73,7 +74,7 @@ class KafkaProducer {
     produce(topic, partition, message, key, timestamp) {
         this.producer
         .produce(topic, partition, Buffer.from(message), key, timestamp, null);
-        // poll everytime after producing events to see any new delivery reports.
+        // poll everytime, after producing events to see any new delivery reports.
         this.producer.poll();
     }
 
