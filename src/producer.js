@@ -42,6 +42,13 @@ class KafkaProducer {
                 console.log('Producer connected to kafka cluster...');
                 resolve(this.producer);
             })
+            .on('delivery-report', (err, report) => {
+                if (err) {
+                    console.warn('Error producing message: ', err);
+                } else {
+                    console.log('Produced event: ', JSON.stringify(report));
+                }
+            })
             .on('event.error', (err) => {
                 console.warn('event.error: ', err);
                 reject(err);
@@ -50,16 +57,6 @@ class KafkaProducer {
             .on('disconnected', (msg) => {
                 console.log('Producer disconnected. ' + JSON.stringify(msg));
             })
-
-            if (typeof this.topicConfig.acks === 'number' && this.topicConfig.acks > 0 && this.config['dr_cb']) {
-                this.producer.on('delivery-report', (err, report) => {
-                    if (err) {
-                        console.warn('Error producing message: ', err);
-                    } else {
-                        console.log('Produced event: ', JSON.stringify(report));
-                    }
-                })
-            }
         });
     }
 
