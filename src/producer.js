@@ -39,30 +39,35 @@ class KafkaProducer extends Client {
      */
     connect() {
         return new Promise((resolve, reject) => {
-            this.producer
-            .connect()
-            .on('ready', (info, metadata) => {
-                this.success('Producer connected to kafka cluster...', {
-                    name: info.name,
-                    metadata: JSON.stringify(metadata),
-                });
-                resolve(this);
-            })
-            .on('delivery-report', (err, report) => {
-                if (err) {
-                    this.error('Error producing message: ', err);
-                } else {
-                    this.log(`Produced event: key=${report.key}, timestamp=${report.timestamp}.`);
-                }
-            })
-            .on('event.error', (err) => {
-                this.error('Producer encountered error: ', err);
+            try {
+                this.producer
+                .connect()
+                .on('ready', (info, metadata) => {
+                    this.success('Producer connected to kafka cluster...', {
+                        name: info.name,
+                        metadata: JSON.stringify(metadata),
+                    });
+                    resolve(this);
+                })
+                .on('delivery-report', (err, report) => {
+                    if (err) {
+                        this.error('Error producing message: ', err);
+                    } else {
+                        this.log(`Produced event: key=${report.key}, timestamp=${report.timestamp}.`);
+                    }
+                })
+                .on('event.error', (err) => {
+                    this.error('Producer encountered error: ', err);
+                    reject(err);
+                })
+                .on('event.log',  (eventData) => this.log('Logging consumer event: ', eventData))
+                .on('disconnected', (metrics) => {
+                    this.log('Producer disconnected. Client metrics are: ', metrics.connectionOpened);
+                });   
+            } catch (err) {
+                this.error('Producer encountered while connecting to kafka server.', err);
                 reject(err);
-            })
-            .on('event.log',  (eventData) => this.log('Logging consumer event: ', eventData))
-            .on('disconnected', (metrics) => {
-                this.log('Producer disconnected. Client metrics are: ', metrics.connectionOpened);
-            })
+            }
         });
     }
 
@@ -73,14 +78,18 @@ class KafkaProducer extends Client {
      * @param {import('../types').StringMessageValue} message: message to be produced. 
      * @param {import('node-rdkafka').MessageKey} key: key associated with the message.
      * @param {import('node-rdkafka').NumberNullUndefined} timestamp: timestamp to send with the message. 
-     * @returns {import('../types').BooleanOrNumber}: returns true or librdkafka error code.
+     * @returns {import('../types').BooleanOrNumber}: returns boolean or librdkafka error code.
      */
     produce(topic, partition, message, key, timestamp) {
-        const isSuccess = this.producer
-        .produce(topic, partition, Buffer.from(message), key, timestamp, null);
-        // poll everytime, after producing events to see any new delivery reports.
-        this.producer.poll();
-        return isSuccess;
+        try {
+            const isSuccess = this.producer.produce(topic, partition, Buffer.from(message), key, timestamp, null);
+            // poll everytime, after producing events to see any new delivery reports.
+            this.producer.poll();
+            return isSuccess;
+        } catch (err) {
+            this.error(`Producer encountered error while producing message to topic=${topic}, partition=${partition} with key=${key}`, err);
+            return false;
+        }
     }
 
     /**
@@ -91,7 +100,11 @@ class KafkaProducer extends Client {
      * @returns {KafkaProducer}
      */
     flush(timeout, postFlushAction) {
-        this.producer.flush(timeout, postFlushAction);
+        try {
+            this.producer.flush(timeout, postFlushAction);
+        } catch (err) {
+            this.error('Producer encountered error while flusing events.', err);
+        }
         return this;
     }
 
@@ -101,7 +114,11 @@ class KafkaProducer extends Client {
      * @returns {KafkaProducer}
      */
     disconnect(postDisconnectAction) {
-        this.producer.disconnect(postDisconnectAction);
+        try {
+            this.producer.disconnect(postDisconnectAction);
+        } catch (err) {
+            this.error('Producer encountered error while disconnecting.', err);
+        }
         return this;
     }
 }

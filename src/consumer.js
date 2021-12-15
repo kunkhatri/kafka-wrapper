@@ -36,24 +36,29 @@ class KafkaConsumer extends Client{
      */
     connect() {
         return new Promise((resolve, reject) => {
-            this.consumer
-            .connect()
-            .on('ready', (info, metadata) => {
-                console.log('connected');
-                this.success('Consumer connected to kafka cluster....', {
-                    name: info.name,
-                    metadata: JSON.stringify(metadata),
-                });
-                resolve(this);
-            })
-            .on('event.error', (err) => {
-                this.error('Consumer encountered error: ', err);
+            try {
+                this.consumer
+                .connect()
+                .on('ready', (info, metadata) => {
+                    console.log('connected');
+                    this.success('Consumer connected to kafka cluster....', {
+                        name: info.name,
+                        metadata: JSON.stringify(metadata),
+                    });
+                    resolve(this);
+                })
+                .on('event.error', (err) => {
+                    this.error('Consumer encountered error: ', err);
+                    reject(err);
+                })
+                .on('event.log',  (eventData) => this.log('Logging consumer event: ', eventData))
+                .on('disconnected', (metrics) => {
+                    this.log('Consumer disconnected. Client metrics are: ', metrics.connectionOpened);
+                })
+            } catch (err) {
+                this.error('Consumer encountered while connecting to kafka server.', err);
                 reject(err);
-            })
-            .on('event.log',  (eventData) => this.log('Logging consumer event: ', eventData))
-            .on('disconnected', (metrics) => {
-                this.log('Consumer disconnected. Client metrics are: ', metrics.connectionOpened);
-            })
+            }
         });
     }
 
@@ -63,8 +68,12 @@ class KafkaConsumer extends Client{
      * @returns {KafkaConsumer}
      */
     subscribe(topics) {
-        this.consumer.subscribe(topics);
-        return this;        
+        try {
+            this.consumer.subscribe(topics);
+        } catch (err) {
+            this.console.error(`Consumer encountered error while subscribing to topics=${topics}`, err);
+        }
+        return this;
     }
 
     /**
@@ -72,7 +81,11 @@ class KafkaConsumer extends Client{
      * @returns {KafkaConsumer}
      */
     unsubscribe() {
-        this.consumer.unsubscribe();
+        try {
+            this.consumer.unsubscribe();
+        } catch (err) {
+            this.console.error('Consumer encountered error while unsubscribing', err);
+        }
         return this;
     }
 
@@ -83,7 +96,11 @@ class KafkaConsumer extends Client{
      * @param {Function} actionOnData: callback to return when message is read. 
      */
     consume(actionOnData) {
-        this.consumer.consume(actionOnData);
+        try {
+            this.consumer.consume(actionOnData);
+        } catch (err) {
+            this.error('Consumer encountered error while consuming messages', err);
+        }
     }
 
     /**
@@ -94,7 +111,11 @@ class KafkaConsumer extends Client{
      * @param {Function | null} actionOnData: callback to be executed for each message.
      */
     consumeBatch(msgCount, actionOnData) {
-        this.consumer.consume(msgCount, actionOnData);   
+        try {
+            this.consumer.consume(msgCount, actionOnData);   
+        } catch (err) {
+            this.error(`Consumer encountered error while consuming messages in batch of size=${msgCount}`, err)
+        }
     }
 
 
