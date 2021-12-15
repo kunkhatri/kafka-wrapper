@@ -1,6 +1,5 @@
 const Consumer = require('node-rdkafka').KafkaConsumer;
 
-
 class KafkaConsumer {
 
     /**
@@ -38,7 +37,7 @@ class KafkaConsumer {
             .connect()
             .on('ready', () => {
                 console.log('Consumer connected to kafka cluster....')
-                resolve(this.consumer);
+                resolve(this);
             })
             .on('event.error', (err) => {
                 console.warn('event.error: ', err);
@@ -47,8 +46,6 @@ class KafkaConsumer {
             .on('event.log',  (log) => console.log('Logging event: ', log))
             .on('disconnected', (msg) => {
                 console.log('Consumer disconnected. ' + JSON.stringify(msg));
-                console.log('Trying to connect it back.....');
-                this.consumer.connect();
             })
         });
     }
@@ -62,6 +59,10 @@ class KafkaConsumer {
         return this;        
     }
 
+    unsubscribe() {
+        this.consumer.unsubscribe();
+        return this;
+    }
 
     /**
      * Consumes message one-by-one and executes actionsOnData callback
@@ -70,8 +71,7 @@ class KafkaConsumer {
      * @param {Function} actionOnData: callback to return when message is read. 
      */
     consume(actionOnData) {
-        this._onDataReadEvent(actionOnData);
-        this.consumer.consume();
+        this.consumer.consume(actionOnData);
     }
 
     /**
@@ -82,26 +82,10 @@ class KafkaConsumer {
      * @param {Function | null} actionOnData: callback to be executed for each message.
      */
     consumeBatch(msgCount, actionOnData) {
-        this._onDataReadEvent(actionOnData);
-        this.consumer.consume(msgCount);   
+        this.consumer.consume(msgCount, actionOnData);   
     }
 
-    _onDataReadEvent(actionOnData) {
-        this.consumer.on('data', (msg) => {
-            console.log(`Consumed message: 
-                topic=${msg.topic}, partition=${msg.partition}, offset=${msg.offset}, 
-                key=${msg.key}, size=${msg.size} bytes`
-            );
-            if (actionOnData && typeof actionOnData === 'function') {
-                actionOnData({
-                    value: msg.value.toString(),
-                    key: msg.key,
-                    topic: msg.topic,
-                    partition: msg.partition,
-                });
-            }
-        });
-    }
+
 }
 
 module.exports = KafkaConsumer;

@@ -1,4 +1,8 @@
-const KafkaProducer  = require('.').KafkaProducer;
+const KafkaProducer  = require('..').KafkaProducer;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function producerExample() {
     if (process.argv.length < 4) {
@@ -35,13 +39,18 @@ async function producerExample() {
     );
     await producer.connect();
   
-    let numEvents = 10;
-    for (let idx = 0; idx < numEvents; ++idx) {
+    const numEvents = 1000;
+    const times = 1000;
+    
+    for (let t = 0; t < times; t++) {
+      for (let idx = 0; idx < numEvents; ++idx) {
   
         const key = users[Math.floor(Math.random() * users.length)];
         const value = items[Math.floor(Math.random() * items.length)];
 
         producer.produce(topic, null, value, key);
+      }
+      await sleep(1000);
     }
   
     producer.flush(10000, () => {

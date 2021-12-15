@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "A simple kafka client to produce and consume messages to/from kafka cluster.",
   "main": "index.js",
+  "types": "types/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -15,7 +16,7 @@
     "kafka-client",
     "nodejs"
   ],
-  "author": "kkhatri",
+  "license": "ISC",
   "dependencies": {
     "node-rdkafka": "^2.12.0"
   }

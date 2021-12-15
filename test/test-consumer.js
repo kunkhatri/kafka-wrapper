@@ -1,4 +1,9 @@
-const KafkaConsumer  = require('.').KafkaConsumer;
+const KafkaConsumer  = require('..').KafkaConsumer;
+
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function consumerExample() {
 
@@ -37,7 +42,15 @@ if (process.argv.length < 4) {
     consumer
     .subscribe([topic]);
     
-    consumer.consume((msg) => console.log('msg read: ' + msg.value));
+    const times = 100;
+    for (let i = 0; i < times; i++) {
+      consumer.consume((err, msg) => {
+        console.log('error: ', err);
+        console.log('msg read: ', msg);
+      });
+      console.log('sleeping...');
+      await sleep(1000);
+    }
   }
   
   consumerExample()

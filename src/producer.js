@@ -67,12 +67,14 @@ class KafkaProducer {
      * @param {String} key: key associated with the message.
      * @param {Number | null} partition: partition number to produce to.
      * @param {Number | null} timestamp: timestamp to send with the message. 
+     * @return {boolean | number}: returns true or librdkafka error code.
      */
     produce(topic, partition, message, key, timestamp) {
-        this.producer
+        const isSuccess = this.producer
         .produce(topic, partition, Buffer.from(message), key, timestamp, null);
         // poll everytime, after producing events to see any new delivery reports.
         this.producer.poll();
+        return isSuccess;
     }
 
     flush(timeout, postFlushAction) {
@@ -80,8 +82,9 @@ class KafkaProducer {
         return this;
     }
 
-    disconnect() {
-        this.producer.disconnect();
+    disconnect(postDisconnectAction) {
+        this.producer.disconnect(postDisconnectAction);
+        return this;
     }
 }
 
