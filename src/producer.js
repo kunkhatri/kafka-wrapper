@@ -1,14 +1,17 @@
 const Producer = require('node-rdkafka').Producer;
+const Client = require('./client');
 
-class KafkaProducer {
+class KafkaProducer extends Client {
 
     /**
      * Initializes a KafkaProducer.
      * @param {String} clientId: id to identify a client producing the message.
-     * @param {Object} config: configs for producer.
-     * @param {Object} topicConfig: topic configs.
+     * @param {import('node-rdkafka').ProducerGlobalConfig} config: configs for producer.
+     * @param {import('node-rdkafka').ProducerTopicConfig} topicConfig: topic configs.
+     * @param {EventEmitter} emitter: to emit log messages
      */
-    constructor(clientId, config, topicConfig) {
+    constructor(clientId, config, topicConfig, emitter) {
+        super(clientId, 'producer', emitter);
         this.config = Object.assign({
             'metadata.broker.list': 'localhost:9092',
             'retry.backoff.ms': 200,
@@ -38,24 +41,27 @@ class KafkaProducer {
         return new Promise((resolve, reject) => {
             this.producer
             .connect()
-            .on('ready', () => {
-                console.log('Producer connected to kafka cluster...');
-                resolve(this.producer);
+            .on('ready', (info, metadata) => {
+                this.success('Producer connected to kafka cluster...', {
+                    name: info.name,
+                    metadata: JSON.stringify(metadata),
+                });
+                resolve(this);
             })
             .on('delivery-report', (err, report) => {
                 if (err) {
-                    console.warn('Error producing message: ', err);
+                    this.error('Error producing message: ', err);
                 } else {
-                    console.log('Produced event: ', JSON.stringify(report));
+                    this.log(`Produced event: key=${report.key}, timestamp=${report.timestamp}.`);
                 }
             })
             .on('event.error', (err) => {
-                console.warn('event.error: ', err);
+                this.error('Producer encountered error: ', err);
                 reject(err);
             })
-            .on('event.log',  (log) => console.log(log))
-            .on('disconnected', (msg) => {
-                console.log('Producer disconnected. ' + JSON.stringify(msg));
+            .on('event.log',  (eventData) => this.log('Logging consumer event: ', eventData))
+            .on('disconnected', (metrics) => {
+                this.log('Producer disconnected. Client metrics are: ', metrics.connectionOpened);
             })
         });
     }
@@ -63,11 +69,11 @@ class KafkaProducer {
     /**
      * Produce a message to a topic-partition.
      * @param {String} topic: name of topic 
-     * @param {String} message: message to be produced. 
-     * @param {String} key: key associated with the message.
-     * @param {Number | null} partition: partition number to produce to.
-     * @param {Number | null} timestamp: timestamp to send with the message. 
-     * @return {boolean | number}: returns true or librdkafka error code.
+     * @param {import('node-rdkafka').NumberNullUndefined} partition: partition number to produce to.
+     * @param {import('../types').StringMessageValue} message: message to be produced. 
+     * @param {import('node-rdkafka').MessageKey} key: key associated with the message.
+     * @param {import('node-rdkafka').NumberNullUndefined} timestamp: timestamp to send with the message. 
+     * @returns {import('../types').BooleanOrNumber}: returns true or librdkafka error code.
      */
     produce(topic, partition, message, key, timestamp) {
         const isSuccess = this.producer
@@ -77,11 +83,23 @@ class KafkaProducer {
         return isSuccess;
     }
 
+    /**
+     * Flush everything on the internal librdkafka buffer. 
+     * Good to perform before disconnect.
+     * @param {import('node-rdkafka').NumberNullUndefined}} timeout 
+     * @param {import('../types').ErrorHandlingFunction} postFlushAction 
+     * @returns {KafkaProducer}
+     */
     flush(timeout, postFlushAction) {
         this.producer.flush(timeout, postFlushAction);
         return this;
     }
 
+    /**
+     * Disconnects producer.
+     * @param {import('../types').DisconnectFunction} postDisconnectAction 
+     * @returns {KafkaProducer}
+     */
     disconnect(postDisconnectAction) {
         this.producer.disconnect(postDisconnectAction);
         return this;

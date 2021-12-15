@@ -1,15 +1,18 @@
 const Consumer = require('node-rdkafka').KafkaConsumer;
+const Client = require('./client');
 
-class KafkaConsumer {
+class KafkaConsumer extends Client{
 
     /**
      * Initializes a KafkaConsumer.
      * @param {String} clientId: id to identify a client consuming the message. 
      * @param {String} groupId: consumer group id, the consumer belongs to. 
-     * @param {Object} config: configs for consumer.
-     * @param {Object} topicConfig: topic configs 
+     * @param {import('node-rdkafka').ConsumerGlobalConfig} config: configs for consumer.
+     * @param {import('node-rdkafka').ConsumerTopicConfig} topicConfig: topic configs 
+     * @param {EventEmitter} emitter: to emit log events
      */
-    constructor(clientId, groupId, config, topicConfig) {
+    constructor(clientId, groupId, config, topicConfig, emitter) {
+        super(clientId, 'consumer', emitter);
         this.config = Object.assign({
             'metadata.broker.list': 'localhost:9092',
             'socket.keepalive.enable': true,
@@ -35,30 +38,39 @@ class KafkaConsumer {
         return new Promise((resolve, reject) => {
             this.consumer
             .connect()
-            .on('ready', () => {
-                console.log('Consumer connected to kafka cluster....')
+            .on('ready', (info, metadata) => {
+                console.log('connected');
+                this.success('Consumer connected to kafka cluster....', {
+                    name: info.name,
+                    metadata: JSON.stringify(metadata),
+                });
                 resolve(this);
             })
             .on('event.error', (err) => {
-                console.warn('event.error: ', err);
+                this.error('Consumer encountered error: ', err);
                 reject(err);
             })
-            .on('event.log',  (log) => console.log('Logging event: ', log))
-            .on('disconnected', (msg) => {
-                console.log('Consumer disconnected. ' + JSON.stringify(msg));
+            .on('event.log',  (eventData) => this.log('Logging consumer event: ', eventData))
+            .on('disconnected', (metrics) => {
+                this.log('Consumer disconnected. Client metrics are: ', metrics.connectionOpened);
             })
         });
     }
 
     /**
      * Subscribe to topics.
-     * @param {Array} topics: array of topic names. 
+     * @param {import('node-rdkafka').SubscribeTopicList} topics: array of topic names. 
+     * @returns {KafkaConsumer}
      */
     subscribe(topics) {
         this.consumer.subscribe(topics);
         return this;        
     }
 
+    /**
+     * Unsubscribe from all the subscribed topics.s
+     * @returns {KafkaConsumer}
+     */
     unsubscribe() {
         this.consumer.unsubscribe();
         return this;
