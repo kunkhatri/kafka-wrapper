@@ -1,4 +1,4 @@
-const Consumer = require('node-rdkafka').KafkaConsumer;
+const Kafka = require('node-rdkafka');
 const Client = require('./client');
 
 class KafkaConsumer extends Client{
@@ -12,20 +12,16 @@ class KafkaConsumer extends Client{
      * @param {EventEmitter} emitter: to emit log events
      */
     constructor(clientId, groupId, config, topicConfig, emitter) {
-        super(clientId, 'consumer', emitter);
-        this.config = Object.assign({
-            'metadata.broker.list': 'localhost:9092',
-            'socket.keepalive.enable': true,
+        // consumer specific default configs we would like to have
+        config = Object.assign({
             'allow.auto.create.topics': true,
           }, 
           config,
           { 
-            'client.id' : clientId,
             'group.id': groupId,
-        }
-        );
-        this.topicConfig = topicConfig;
-        this.consumer = new Consumer(this.config);
+        });
+        super(clientId, 'consumer', config, topicConfig, emitter);
+        this.consumer = new Kafka.KafkaConsumer(this.config, this.topicConfig);
     }
 
     /**

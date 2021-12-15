@@ -1,4 +1,4 @@
-const Producer = require('node-rdkafka').Producer;
+const Kafka = require('node-rdkafka');
 const Client = require('./client');
 
 class KafkaProducer extends Client {
@@ -11,24 +11,22 @@ class KafkaProducer extends Client {
      * @param {EventEmitter} emitter: to emit log messages
      */
     constructor(clientId, config, topicConfig, emitter) {
-        super(clientId, 'producer', emitter);
-        this.config = Object.assign({
-            'metadata.broker.list': 'localhost:9092',
+        // producer config defaults should go here.
+        config = Object.assign({
             'retry.backoff.ms': 200,
             'message.send.max.retries': 10,
-            'socket.keepalive.enable': true,
             'queue.buffering.max.messages': 100000,
             'queue.buffering.max.ms': 1000,
             'batch.num.messages': 1000000,
             'dr_cb': true
           }, 
-          config,
-          { 'client.id' : clientId }
+          config
         );
-        this.topicConfig = Object.assign({
-            'acks' : 1,
-        }, topicConfig);
-        this.producer = new Producer(this.config);
+        // producer topic config defaults should go here.
+        topicConfig = Object.assign({ 'acks' : 1 }, topicConfig);
+
+        super(clientId, 'producer', config, topicConfig, emitter);
+        this.producer = new Kafka.Producer(this.config, this.topicConfig);
     }
 
     /**

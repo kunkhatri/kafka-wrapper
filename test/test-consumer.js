@@ -11,7 +11,7 @@ if (process.argv.length < 4) {
     console.log(
         'Please provide command line arguments to the script.\n' +
         'Expected arguments in order are: `bootstrap-server` and `topic`. Example....\n' + 
-        'node test-producer.js bootstrap-servers=34.229.149.56:9092,54.196.127.213:9092 topic=test-topic'
+        'node test-consumer.js bootstrap-servers=34.229.149.56:9092,54.196.127.213:9092 topic=test-topic'
     );
     process.exit(1);
     }

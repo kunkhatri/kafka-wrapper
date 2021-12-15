@@ -1,7 +1,18 @@
 class Client {
-    constructor(clientId, clientType, emitter) {
+    constructor(clientId, clientType, config, topicConfig, emitter) {
         this.clientId = clientId;
         this.clientType = clientType;
+        
+        // common config defaults should go here.
+        this.config = Object.assign({
+            'metadata.broker.list': 'localhost:9092',
+            'socket.keepalive.enable': true,
+          }, 
+          config,
+          { 'client.id': clientId }
+        );
+        // commong topic configs defaults should go here. 
+        this.topicConfig = topicConfig;
         this.emitter = emitter;
     }
 
